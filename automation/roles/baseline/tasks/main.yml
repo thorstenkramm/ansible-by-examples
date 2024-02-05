@@ -1,0 +1,15 @@
+---
+- name: Disable recommended packages
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/60no-recommends
+    mode: "0644"
+    content: |
+      APT::Install-Recommends "false";
+      APT::Install-Suggests "false";
+
+- name: Install default packages
+  ansible.builtin.apt:
+    pkg:
+      - vim
+      - curl
+      - rsync

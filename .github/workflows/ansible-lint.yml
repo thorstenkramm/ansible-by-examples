@@ -1,0 +1,16 @@
+---
+name: Ansible Lint
+on: [push]
+jobs:
+  ansible-lint:
+    name: Ansible Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Run Ansible Lint
+        run: |
+          apt-get -y install ansible-lint
+          cd automation
+          ansible-lint
