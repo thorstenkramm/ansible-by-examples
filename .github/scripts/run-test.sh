@@ -9,7 +9,9 @@ else
 fi
 
 sudo usermod -a -G lxd $(whoami)
+groups
 stat /var/snap/lxd/common/lxd/unix.socket
+sudo chmod o+g '/var/snap/lxd/common/lxd/unix.socket'
 
 if [ $(ip -o addr show lxdbr0 2>/dev/null|wc -l) -gt 0 ];then
   echo "lxd network configured"
