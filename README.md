@@ -58,11 +58,14 @@ lxc launch images:debian/12
 lxc exec first-test bash
 ```
 
+If you cannot manage lxd instances from an unprivileged user account, add the account to the group `lxd` by executing
+`sudo usermod -a -G lxd $(whoami)`.
+
 Now you are logged in to the container named `first-test`. Check the network by doing `ping -c 5 8.8.8.8`. 
 Use Ctrl-D to log out. Back on the console of the host, check the status of your containers with
 
 ```bash
-thorsten@nuc:~$ lxc ls
+thorsten@ansible-dev:~$ lxc ls
 
 +------------+---------+---------------------+-----------------------------------------------+-----------+-----------+
 |    NAME    |  STATE  |        IPV4         |                     IPV6                      |   TYPE    | SNAPSHOTS |
@@ -113,24 +116,9 @@ cd ~/ansible-by-example
 bash env-spinup.sh
 ```
 
-Add the container names and IP addresses to the /etc/hosts so you can SSH into them by hostname.
+The `env-spinup.sh` script has added the names and IP addresses of the containers to the /etc/hosts file.
 
-```bash
-sudo apt -y install jq
-CONTAINERS="una ultima daniela delia"
-for CONTAINER in $CONTAINERS;do
-  echo "Getting IP of $CONTAINER"
-  IP=$(lxc ls $CONTAINER --format=json|jq -r .[0].state.network.eth0.addresses[0].address)
-  echo $IP
-  if grep -q $IP /etc/hosts;then
-    echo "$CONTAINER already in /etc/hosts"
-    continue
-  fi
-  sudo sh -c "echo $IP $CONTAINER >> /etc/hosts"
-done
-```
-
-Verify you can access them all
+Verify you can access all container via SSH:
 
 ```bash
 CONTAINERS="una ultima daniela delia"
@@ -145,7 +133,6 @@ Now let's verify we can access all containers with Ansible.
 
 ```bash
 sudo apt-get install -y ansible
-cd automation/
 ansible --inventory=una,ultima,delia,daniela, all -m ping --extra-vars "ansible_user=root"
 ansible -i inventory/example.inventory.yaml all -m ping --extra-vars "ansible_user=root"
 ```
@@ -232,7 +219,6 @@ This assures your files are tidy and consistent.
 
 ```bash
 sudo apt install ansible-lint
-cd ./automation
 ansible-lint
 ```
 

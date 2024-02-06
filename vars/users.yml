@@ -16,9 +16,8 @@ users_present:
   - username: john.doe
     firstname: John
     lastname: Doe
-    hosts:  # Create the user only on the specified hosts
-      - una
-      - ultima
+    sudo: true
+    on_all_hosts: true
 
 # Make sure the below users given by username are not present
 users_absent:

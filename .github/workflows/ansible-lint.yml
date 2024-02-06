@@ -13,4 +13,6 @@ jobs:
         run: |
           sudo apt-get -y install ansible-lint
           cd automation
-          ansible-lint
+          pwd
+          ls -la
+          ansible-lint -v

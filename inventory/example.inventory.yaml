@@ -1,0 +1,35 @@
+---
+all:
+  hosts:
+    una:
+      ipv4: 10.10.10.10
+      fqdn: una.localnet.local
+      aliases:
+        - filer1
+        - backup1
+
+    ultima:
+      ipv4: 10.10.10.11
+      fqdn: ultima.localnet.local
+      aliases:
+        - filer2
+        - backup2
+
+    delia:
+      fqdn: delia.localnet.local
+      ipv4: 10.10.10.12
+      aliases:
+        - filer3
+        - backup3
+
+    daniela:
+      fqdn: daniela.localnet.local
+      ipv4: 10.10.10.13
+
+dns_servers:
+  hosts:
+    una:
+      dns_upstreams:
+        - 8.8.4.4
+        - 9.9.9.9
+    daniela:

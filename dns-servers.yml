@@ -1,0 +1,8 @@
+---
+- name: Install DNS Servers and maintain records
+  hosts: dns_servers
+  gather_facts: false
+  vars_files:
+    - vars/other_hosts.yml
+  roles:
+    - role: powerdns

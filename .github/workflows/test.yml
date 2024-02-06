@@ -1,0 +1,14 @@
+---
+name: Ansible Test
+on: [push]
+jobs:
+  ansible-test:
+    name: Ansible Test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Run Test
+        run: |
+          bash .github/scripts/run-test.sh
