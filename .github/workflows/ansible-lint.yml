@@ -12,7 +12,6 @@ jobs:
       - name: Run Ansible Lint
         run: |
           sudo apt-get -y install ansible-lint
-          cd automation
           pwd
           ls -la
           ansible-lint -v

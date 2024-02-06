@@ -8,12 +8,15 @@ else
   sudo snap install lxd
 fi
 
+sudo usermod -a -G lxd $(whoami)
+stat /var/snap/lxd/common/lxd/unix.socket
+
 if [ $(ip -o addr show lxdbr0 2>/dev/null|wc -l) -gt 0 ];then
   echo "lxd network configured"
 else
   sudo lxd init --auto
 fi
-sudo usermod -a -G lxd $(whoami)
+
 export SSH_PUB_KEY="$(cat files/ssh-pub-keys/john.doe.pub)"
 . env-spinup.sh
 pkill ssh-agent || true
