@@ -23,6 +23,7 @@ export SSH_PUB_KEY="$(cat files/ssh-pub-keys/john.doe.pub)"
 . env-spinup.sh
 pkill ssh-agent || true
 eval $(ssh-agent)
+chmod 0600 files/ssh-pub-keys/john.doe
 ssh-add files/ssh-pub-keys/john.doe
 
 echo "Checking SSH access to containers"
