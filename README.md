@@ -42,10 +42,22 @@ create you development environment based on a X86_64 CPU.
 
 ### Install LXD
 
-The installation of LXD on Debian and Ubuntu is via Snap.
+The installation of LXD on Debian 11 and Ubuntu 20.04 & 22.04 is via Snap or PPA.
+Debian 12 provides [regular packages](https://packages.debian.org/bookworm/lxd) for LXD.
 
+#### via Snap
 ```bash
 sudo snap install lxd
+```
+
+#### without Snap
+For good reasons you may want to avoid using Snap. Refer to [this page](https://github.com/randombenj/lxd-deb) and try 
+the mentioned PPA repo.
+
+### Configure an use LXD
+After having installed the LXD command line tools, create a default configuration by executing
+
+```bash
 sudo lxd init --auto
 ```
 
