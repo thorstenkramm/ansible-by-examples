@@ -54,7 +54,7 @@ sudo snap install lxd
 For good reasons you may want to avoid using Snap. Refer to [this page](https://github.com/randombenj/lxd-deb) and try 
 the mentioned PPA repo.
 
-### Configure an use LXD
+### Configure and use LXD
 After having installed the LXD command line tools, create a default configuration by executing
 
 ```bash
