@@ -33,3 +33,9 @@ dns_servers:
         - 8.8.4.4
         - 9.9.9.9
     daniela:
+
+mysql_servers:
+  hosts:
+    una:
+    delia:
+    daniela:

@@ -3,7 +3,7 @@
 This repository contains a collection of playbooks, plays, roles and inventories demonstrating how to manage a network,
 users, and applications.
 
-> 🛑This **is not a beginners guide!** You must be very familiar with Linux system administration, particularly with 
+> 🛑 This **is not a beginners guide!** You must be very familiar with Linux system administration, particularly with 
 > key-based SSH authentication. 
 
 All recipes and approaches demonstrated her refer to Debian and Ubuntu only. If you are managing RPM-based distros this
@@ -26,12 +26,17 @@ here some consideration about what you should **NOT** use.
   services such as Systemd are not working inside a container. Also you want your environment to be persistent until you 
   reset it. 
 
-LXD is the perfect solution for creating an Ansible development environment. Its lightweight, fast, persistent and built-in
-to all Linux distributions. Inside a LXD container you have a fully featured operating system. By default, containers
-can communicate amongst each other.
+Linux Containers are the perfect solution for creating an Ansible development environment. Its lightweight, fast, 
+persistent and built-in to all Linux distributions. Inside a container you have a fully featured operating system. 
+By default, containers can communicate amongst each other.
 
-Where to install LXD? If you are running Linux on your PC or laptop, you can install it directly there. If your workplace
-is based on Windows or Mac, run a virtual machine with Linux and install LXD inside. This kind of nested virtualization 
+While the ability to run a container is a kernel feature, you need userland tools to manage them. Originally the 
+userland tools where named `lxc` which has been replaced by `lxd`. The end of `lxd` has been announced and the current
+userland tools to manage linux containers are called `incus`.
+
+**Where to install the linux containers and incus?**   
+If you are running Linux on your PC or laptop, you can install it directly there. If your workplace
+is based on Windows or Mac, run a virtual machine with Linux and install incus inside. This kind of nested virtualization 
 is supported. As an alternative you can use some old unused hardware or a cloud VM. 
 
 Caution with the CPU architecture! If you are using modern Apple hardware with ARM architecture think twice before you 
@@ -40,44 +45,86 @@ pretend to manage with Ansible will be based on X86_64 CPUs. As soon as you star
 the distribution, you must handle the two CPU architectures differently. This can become a rabbit hole. When possible, 
 create you development environment based on a X86_64 CPU.
 
-### Install LXD
+### Install Incus
 
-The installation of LXD on Debian 11 and Ubuntu 20.04 & 22.04 is via Snap or PPA.
-Debian 12 provides [regular packages](https://packages.debian.org/bookworm/lxd) for LXD.
-
-#### via Snap
-```bash
-sudo snap install lxd
-```
-
-#### without Snap
-For good reasons you may want to avoid using Snap. Refer to [this page](https://github.com/randombenj/lxd-deb) and try 
-the mentioned PPA repo.
-
-### Configure and use LXD
-After having installed the LXD command line tools, create a default configuration by executing
+The installation of Incus on Debian 12 and Ubuntu 20.04 & 22.04 is via the [repository of the maintainer](https://github.com/zabbly/incus).
+Future versions of Debian and Ubuntu will have incus included. 
 
 ```bash
-sudo lxd init --auto
+cat <<"EOF"|sudo bash
+curl -fsSL https://pkgs.zabbly.com/key.asc | gpg --show-keys --fingerprint
+mkdir -p /etc/apt/keyrings/
+curl -fsSL https://pkgs.zabbly.com/key.asc -o /etc/apt/keyrings/zabbly.asc
+echo "Enabled: yes
+Types: deb
+URIs: https://pkgs.zabbly.com/incus/stable
+Suites: $(. /etc/os-release && echo ${VERSION_CODENAME})
+Components: main
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/zabbly.asc
+"> /etc/apt/sources.list.d/zabbly-incus-stable.sources
+EOF
 ```
 
-Use `ip -o addr show lxdbr0` to verify a network bridge has been created for the containers.
+Having repo added, you can install incus.
+```bash
+sudo apt-get update
+sudo apt-get --no-install-recommends --no-install-suggests install incus
+```
+### Configure and use Incus
+After having installed the incus command line tools, create a default configuration by executing
+
+```bash
+sudo incus admin init --minimal
+```
+
+Use `ip -o addr show incusbr0` to verify a network bridge has been created for the containers.
+
+Verify you have access to the image repositories by executing:
+
+```bash
+incus image list images:debian arch=amd64 type=container
+incus image list images:ubuntu arch=amd64 type=container
+```
+
+This should give you a list of Debian and Ubuntu versions. 
+
+Make sure your `/etc/subuid` and `/etc/subgid` are correct.
+Both files must have a single entry for the root user `root:1000000:1000000000`. Delete other entries for root, if
+there are any.
+
+```bash
+cat <<EOF|sudo bash
+cp /etc/subuid /etc/subuid.bak
+cp /etc/subgid /etc/subgid.bak
+sed -i '/^root/d' /etc/subuid
+sed -i '/^root/d' /etc/subgid
+echo root:1000000:1000000000 >> /etc/subuid
+echo root:1000000:1000000000 >> /etc/subgid
+service incus restart
+EOF
+```
 
 Create your first container and log in to it.
 
 ```bash
-lxc launch images:debian/12
-lxc exec first-test bash
+incus launch images:debian/12 first-test
+incus exec first-test bash
 ```
 
-If you cannot manage lxd instances from an unprivileged user account, add the account to the group `lxd` by executing
-`sudo usermod -a -G lxd $(whoami)`.
+If you cannot manage incus instances from an unprivileged user account, add the account to the group `incus-admin`
+by executing:
+
+```bash
+sudo usermod -a -G incus-admin $(whoami)
+newgrp incus-admin
+```
 
 Now you are logged in to the container named `first-test`. Check the network by doing `ping -c 5 8.8.8.8`. 
 Use Ctrl-D to log out. Back on the console of the host, check the status of your containers with
 
 ```bash
-thorsten@ansible-dev:~$ lxc ls
+thorsten@ansible-dev:~$ incus ls
 
 +------------+---------+---------------------+-----------------------------------------------+-----------+-----------+
 |    NAME    |  STATE  |        IPV4         |                     IPV6                      |   TYPE    | SNAPSHOTS |
@@ -87,7 +134,7 @@ thorsten@ansible-dev:~$ lxc ls
 
 ```
 
-Delete the first test container with `lxc delete first-test --force`.
+Delete the first test container with `incus delete first-test --force`.
 
 ### Clone the repo
 
@@ -95,7 +142,7 @@ Clone this repo on your desktop with `git clone https://github.com/thorstenkramm
 the `ansible-by-example` folder and start your IDE there. VS Code or PycharmCE are excellent for editing the project
 files. 
 
-If LXD doesn't run directly on your desktop PC, make the project folder available on the LXD host. With SSHFS you can 
+If Incus doesn't run directly on your desktop PC, make the project folder available on the Incus host. With SSHFS you can 
 solve this with ease.
 Log in to your ansible dev machine with the SSH agent active.
 
@@ -119,7 +166,7 @@ The `allow_root` option is crucial. If omitted snap-based commands will not work
 ### Create the development environment
 
 The examples will cover the management of Debian and Ubuntu of different versions.
-LXD container images are very basic. They don't activate SSHD. The spinup script will do this for you.
+Incus container images are very basic. They don't activate SSHD. The spinup script will do this for you.
 For password-less authentication your personal SSH pub key is required.
 
 ```bash
@@ -145,6 +192,7 @@ Now let's verify we can access all containers with Ansible.
 
 ```bash
 sudo apt-get install -y ansible
+ansible-galaxy collection install ansible.posix
 ansible --inventory=una,ultima,delia,daniela, all -m ping --extra-vars "ansible_user=root"
 ansible -i inventory/example.inventory.yaml all -m ping --extra-vars "ansible_user=root"
 ```
@@ -168,6 +216,8 @@ ansible -i inventory/example.inventory.yaml all -m include_role --args name=base
 ```
 
 Note: If the inventory is specified on the command line, the list of hosts must always end with a comma.
+Both commands are doing the same. The first takes the inventory aka the list of hosts as command line parameters where
+the second reads this list form a file.
 
 ### Create users and stop using root
 
@@ -222,6 +272,12 @@ inventory = ./inventory/example.inventory.yaml
 [privilege_escalation]
 become = true
 EOF
+```
+
+From now on you can execute playbooks without further arguments like:
+
+```bash
+ansible-playbook hosts-init.yml
 ```
 
 ### Keep everything tidy and consistent

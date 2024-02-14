@@ -13,3 +13,4 @@
       - vim
       - curl
       - rsync
+      - ca-certificates

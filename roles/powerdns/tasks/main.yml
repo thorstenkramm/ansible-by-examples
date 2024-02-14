@@ -6,6 +6,7 @@
     pkg:
       - pdns-recursor
     update_cache: true
+    cache_valid_time: 3600
 
 - name: Stop systemd-resolved
   ansible.builtin.service:
