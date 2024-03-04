@@ -142,6 +142,9 @@ Clone this repo on your desktop with `git clone https://github.com/thorstenkramm
 the `ansible-by-example` folder and start your IDE there. VS Code or PycharmCE are excellent for editing the project
 files. 
 
+### Make it available on the incus host
+
+#### via SSHFS mount
 If Incus doesn't run directly on your desktop PC, make the project folder available on the Incus host. With SSHFS you can 
 solve this with ease.
 Log in to your ansible dev machine with the SSH agent active.
@@ -162,6 +165,30 @@ ls
 ```
 
 The `allow_root` option is crucial. If omitted snap-based commands will not work from inside a mounted folder. 
+
+#### via SSH ProxyJump
+If cannot or don't want to use SSHFS using an SSH proxy jump is another option. Because ansible by default uses the
+ssh client from the operating system, all settings in your `~/.ssh/config` are applied.
+
+Let's say your incus host has the primary IP address `192.168.178.91` and the incus bridge has the IP address
+`10.62.193.1`. Add the following lines to your `~/.ssh/config` on your desktop pc.
+
+```
+## Ansible Dev Environment
+host 10.62.193.* daniela delia ultima una
+    ProxyJump 192.168.178.91
+```
+
+Test it with 
+```
+desktop$ ssh 10.62.193.174
+```
+
+Whenever you want to access a host in the  10.62.193.0 network, the host `192.168.178.91` will be used as a jump host.
+Of course, this requires password-less log in to the jump host to be set up properly.
+
+To access the incus containers by name, you must insert the IP addresses to your local `/etc/hosts` file.:q
+
 
 ### Create the development environment
 

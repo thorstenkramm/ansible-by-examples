@@ -11,7 +11,7 @@ users_present:
     lastname: Langdon
     hosts:  # Create the user only on the specified host
       - delia
-    sudo: true  # Create a sudo rule so user can become root without a password
+    sudo: false  # Remove a sudo rule to become root
 
   - username: john.doe
     firstname: John
