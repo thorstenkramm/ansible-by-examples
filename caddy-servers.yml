@@ -1,0 +1,6 @@
+---
+- name: Install Caddy Webserver
+  hosts: caddy_servers
+  gather_facts: false
+  roles:
+    - role: caddy-server

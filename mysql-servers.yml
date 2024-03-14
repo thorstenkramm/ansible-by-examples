@@ -1,15 +1,6 @@
 ---
-- name: Install MySQL Server
+- name: Install MySQL Server and Percona Xtrabackup
   hosts: mysql_servers
   gather_facts: true
   roles:
     - role: mysql-server
-
-- name: Install Percona Xtrabackup
-  hosts: mysql_servers
-  gather_facts: true
-  tasks:
-    - name: Install Percona Xtrabackup
-      ansible.builtin.include_role:
-        name: xtrabackup
-      when: xtrabackup|default(false)

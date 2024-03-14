@@ -1,0 +1,115 @@
+# yamllint disable rule:line-length
+---
+- name: Define Caddy Keyring file
+  ansible.builtin.set_fact:
+    caddy_keyring: /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+
+- name: Check if caddy keyring exists
+  stat:
+    path: "{{ caddy_keyring }}"
+  register: caddy_keyring_status
+
+- name: Resolve dependencies
+  ansible.builtin.apt:
+    pkg:
+      - debian-keyring
+      - debian-archive-keyring
+      - apt-transport-https
+      - curl
+  when: not caddy_keyring_status.stat.exists
+
+- name: Download Caddy Repo Key
+  ansible.builtin.get_url:
+    url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+    dest: /var/cache/private/caddy_server-key
+    checksum: sha256:5791c2fb6b6e82feb5a69834dd2131f4bcc30af0faec37783b2dc1c5c224a82a
+  when: not caddy_keyring_status.stat.exists
+
+- name: Add Caddy Repo Key
+  ansible.builtin.shell: >-
+    gpg --batch --yes --dearmor -o {{ caddy_keyring }} <
+    /var/cache/private/caddy-server-key &&
+    rm -f /var/cache/private/caddy-server-key
+  when: not caddy_keyring_status.stat.exists
+
+- name: Add Caddy Repo
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/caddy-stable.list
+    mode: "0644"
+    content: |
+      # Source: Caddy
+      # Site: https://github.com/caddyserver/caddy
+      # Repository: Caddy / stable
+      # Description: Fast, multi-platform web server with automatic HTTPS
+      deb [signed-by={{ caddy_keyring }}] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main
+      deb-src [signed-by={{ caddy_keyring }}] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main
+
+- name: Install Caddy Server
+  ansible.builtin.apt:
+    name: caddy
+    state: present
+    update_cache: true
+
+- name: Create custom systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/caddy.service
+    src: caddy.service
+    mode: "0644"
+  notify: Restart Caddy
+  register: caddy_service
+
+- name: debug
+  debug:
+    var: caddy_service
+
+- name: Caddy Base Config
+  ansible.builtin.copy:
+    dest: /etc/caddy/Caddyfile
+    content: |
+      # This file is managed by Ansible. Do not edit!
+      import conf.d/*.conf
+    mode: "0644"
+  notify: Restart Caddy
+
+- name: Caddy Conf Dir
+  ansible.builtin.file:
+    path: /etc/caddy/conf.d
+    state: directory
+    mode: "0755"
+
+- name: Caddy Default Docroot
+  ansible.builtin.file:
+    path: /var/www/caddy
+    state: directory
+    mode: "0755"
+
+- name: Caddy Index Html
+  ansible.builtin.copy:
+    dest: /var/www/caddy/index.html
+    content: |
+      <h1>Your webserver is running</h1>
+      <p>Start creating something awesome!</p>
+    mode: "0644"
+
+- name: Caddy Default Conf
+  ansible.builtin.copy:
+    dest: /etc/caddy/conf.d/00-default.conf
+    content: |
+      # Global Options
+      # https://caddyserver.com/docs/caddyfile/options
+      {
+          admin off # Disable the admin API
+      }
+      # Default listener
+      :80 {
+        root * /var/www/caddy/
+        file_server
+      }
+    mode: "0644"
+  notify: Restart Caddy
+
+- name: Copy a PHP Example conf
+  ansible.builtin.copy:
+    src: php.conf.example
+    dest: /etc/caddy/conf.d
+    mode: "0644"

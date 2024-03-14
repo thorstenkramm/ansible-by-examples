@@ -1,0 +1,19 @@
+#
+# This is an example of how to use php with Caddy
+#
+www.example.com {
+  root * /var/www/www.example.conf/public
+  php_fastcgi unix//var/run/php/php8.1-fpm.sock
+  try_files {path} /index.php
+  file_server
+  encode zstd gzip
+  log {
+	output file /var/log/www.example.conf/caddy.log
+  }
+  route {
+    header /images/* Cache-Control max-age=31536000
+    header /videos/* Cache-Control max-age=31536000
+    header /css/* Cache-Control max-age=31536000
+    header *.js max-age=31536000
+  }
+}

@@ -319,3 +319,12 @@ ansible-lint
 
 If you get warnings or errors, fix them before pushing your change to git.
 You should also run ansible-lint after each push from your Git workflow. 
+
+## Cheat sheet
+
+Common tasks and their commands:
+
+* Execute a playbook on a single host from the inventory only
+  ```
+  ansible-playbook mysql-servers.yml --limit una
+  ```

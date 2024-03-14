@@ -1,5 +1,5 @@
 ---
-- name: Make sue SSHD reads includes
+- name: Make sure SSHD reads includes
   ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config
     regexp: '^\s*#\s*Include.*'
@@ -65,7 +65,7 @@
   ansible.builtin.file:
     path: /etc/sudoers.d/{{ item.username|replace('.','_') }}
     state: absent
-  when: not item.sudo or item.sudo|bool == false and (
+  when: not item.sudo or not item.sudo|bool and (
     inventory_hostname in item.hosts|default([]) or
     item.on_all_hosts|default(false) )
   loop: "{{ users_present }}"
