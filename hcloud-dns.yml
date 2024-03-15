@@ -1,0 +1,16 @@
+# This playbook requires additional python modules on the ansible host (aka your computer)
+# Debian/Ubuntu:  apt-get install python3-dateutil
+# macOS:          brew install python-dateutil; brew link --overwrite python-dateutil
+---
+- name: Register all hosts from group "hcloud" on the Hetzner Cloud DNS
+  hosts: hcloud
+  gather_facts: false
+  tasks:
+    - name: Apply hcloud-dns role and execute locally
+      block:
+        - import_role:
+            name: hcloud-dns
+      # The DNS is managed through a public API, SSH to the remote host is not required.
+      delegate_to: localhost
+      connection: local  # skip connecting to localhost over SSH
+      become: false  # Calling the DNS AÜI doesn't require root rights.
