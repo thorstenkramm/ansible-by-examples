@@ -1,0 +1,54 @@
+---
+- debug:
+    var: dns_zone
+
+- name: Create ipv4 DNS A Record
+  community.dns.hetzner_dns_record_set:
+    hetzner_token: "{{ lookup('ansible.builtin.env', 'HDNS_TOKEN') }}"
+    state: present
+    zone_name: "{{ dns_zone }}"
+    type: A
+    prefix: "{{ fqdn|replace(dns_zone,'') }}"
+    value:
+      - "{{ ansible_host }}"
+
+- name: Create ipv6 DNS AAAA Record
+  community.dns.hetzner_dns_record_set:
+    hetzner_token: "{{ lookup('ansible.builtin.env', 'HDNS_TOKEN') }}"
+    state: present
+    zone_name: "{{ dns_zone }}"
+    type: AAAA
+    prefix: "{{ fqdn|replace(dns_zone,'') }}"
+    value:
+      - "{{ ipv6 }}"
+  when: ipv6 is defined
+
+- name: Create CNAME records
+  community.dns.hetzner_dns_record_set:
+    hetzner_token: "{{ lookup('ansible.builtin.env', 'HDNS_TOKEN') }}"
+    state: present
+    zone_name: "{{ dns_zone }}"
+    type: CNAME
+    prefix: "{{ item|replace(dns_zone,'') }}"
+    value:
+      - "{{ fqdn }}"
+  loop: "{{ aliases }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Create an ipv4 reverse DNS entry
+  hcloud_rdns:
+    api_token: "{{ lookup('ansible.builtin.env', 'HCLOUD_TOKEN') }}"
+    server: "{{ fqdn }}"
+    ip_address: "{{ ansible_host }}"
+    dns_ptr: "{{ fqdn }}"
+    state: present
+
+- name: Create an ipv4 reverse DNS entry
+  hcloud_rdns:
+    api_token: "{{ lookup('ansible.builtin.env', 'HCLOUD_TOKEN') }}"
+    server: "{{ fqdn }}"
+    ip_address: "{{ ipv6 }}"
+    dns_ptr: "{{ fqdn }}"
+    state: present
+  when: ipv6 is defined

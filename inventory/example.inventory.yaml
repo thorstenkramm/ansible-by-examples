@@ -1,0 +1,63 @@
+---
+all:
+  # Vars for all hosts
+  vars:
+    # Define a bcrypt hash for the root password. e.g. '1234abc'
+    root_password_hash: >-
+      $y$j9T$24GmT.qx2FU3CiY.iUGPo1$ft2Iu6CRPZi9Q6wyOkgieBlMlH4KacSSA6zPxNCDE5D
+
+  # List of hosts
+  hosts:
+    una:  # Ubuntu 20.04
+      ipv4: 10.10.10.10
+      fqdn: una.localnet.local
+      aliases:
+        - filer1
+        - backup1
+
+    ultima:  # Ubuntu 22.04
+      ipv4: 10.10.10.11
+      fqdn: ultima.localnet.local
+      aliases:
+        - filer2
+        - backup2
+
+    delia:  # Debian 12
+      fqdn: delia.localnet.local
+      ipv4: 10.10.10.12
+      aliases:
+        - filer3
+        - backup3
+
+    daniela:  # Debian 11
+      fqdn: daniela.localnet.local
+      ipv4: 10.10.10.13
+
+dns_servers:
+  hosts:
+    una:
+      dns_upstreams:
+        - 8.8.4.4
+        - 9.9.9.9
+    daniela:
+
+mysql_servers:
+  hosts:
+    una:
+      xtrabackup: true  # Install and configure percona xtrabackup
+      # Use MySQL Default version as defined in ./roles/mysql_server/vars/main.yml
+    ultima:
+      xtrabackup: true
+      mysql_version: 8.2.0
+    delia:
+      xtrabckup: true
+      mysql_version: 8.2.0
+    daniela:
+      xtrabackup: true
+
+caddy_servers:
+  hosts:
+    ultima:
+    una:
+    delia:
+    daniela:

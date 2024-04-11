@@ -1,0 +1,24 @@
+---
+users_present:
+  - username: oliver.metcalfe
+    firstname: Oliver
+    lastname: Metcalfe
+    on_all_hosts: true  # Create the user on all hosts
+    sudo: true  # Create a sudo rule so user can become root without a password
+
+  - username: ava.langdon
+    firstname: Ava
+    lastname: Langdon
+    hosts:  # Create the user only on the specified host
+      - delia
+    sudo: false  # Remove a sudo rule to become root
+
+  - username: john.doe
+    firstname: John
+    lastname: Doe
+    sudo: true
+    on_all_hosts: true
+
+# Make sure the below users given by username are not present
+users_absent:
+  - jane.doe

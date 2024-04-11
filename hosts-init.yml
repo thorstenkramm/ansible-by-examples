@@ -1,0 +1,9 @@
+---
+- name: Base Playbook
+  hosts: all
+  gather_facts: true
+  vars_files:
+    - vars/users.yml
+  roles:
+    - role: baseline
+    - role: multiuserbox

@@ -1,0 +1,14 @@
+---
+# A list of hosts to be included in the DNS zone file and the DHCP Config
+other_hosts:
+  - fqdn: www.example.com
+    ipv4: 192.168.1.1
+    aliases:
+      - www.example.de
+      - www.example.at
+
+  - fqdn: foo.local
+    ipv4: 192.168.1.2
+    aliases:
+      - foo
+      - baz

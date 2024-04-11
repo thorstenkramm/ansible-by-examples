@@ -1,0 +1,65 @@
+---
+# Install a powerdns DNS server and create records for all hosts from the inventory
+
+- name: Install PowerDNS
+  ansible.builtin.apt:
+    pkg:
+      - pdns-recursor
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Stop systemd-resolved
+  ansible.builtin.service:
+    name: systemd-resolved
+    state: stopped
+    enabled: false
+
+- name: Config for serving records from hosts-style zone file
+  ansible.builtin.copy:
+    dest: /etc/powerdns/recursor.d/export-hosts.conf
+    content: |
+      export-etc-hosts=on
+      etc-hosts-file=/var/spool/powerdns/hosts
+      export-etc-hosts-search-suffix=localnet.local
+      local-address=0.0.0.0
+    mode: "0644"
+  notify:
+    - Restart PowerDNS Recursor
+
+- name: Config for upstream DNS Servers
+  ansible.builtin.copy:
+    dest: /etc/powerdns/recursor.d/forward-recursor.conf
+    content: |
+      forward-zones-recurse=.={{ dns_upstreams|default(default_upstreams,true)|join(', .=') }}
+    mode: "0644"
+  vars:
+    default_upstreams:
+      - 9.9.9.9
+      - 1.1.1.1
+      - 8.8.8.8
+  notify:
+    - Restart PowerDNS Recursor
+
+# Print vars
+# - name: debug
+#  debug:
+#    msg: "{{ item.ipv4 }} {{ item.fqdn }} {{ item.al|default([],true)|join(' ') }}"
+#  loop: "{{ (hostvars | json_query('*.{fqdn: fqdn, ipv4: ipv4, aliases: aliases}'))+ other_hosts }}"
+#  when: item.fqdn and item.ipv4
+
+# Add all hosts from the inventory adn from additional var 'other_hosts'
+#  to the power dns zone file
+- name: Maintain DNS Records
+  ansible.builtin.copy:
+    dest: /var/spool/powerdns/hosts
+    content: |
+      # This is a simple zone file for PowerDNS recursor in hosts-style format.
+      # Created by Ansible. Do not edit.
+      {% for item in hosts + other_hosts %}
+      {{ item.ipv4 }} {{ item.fqdn }} {{ item.aliases|default([],true)|join(' ') }}
+      {% endfor %}
+    mode: "0644"
+  vars:
+    hosts: "{{ hostvars | json_query('*.{fqdn: fqdn, ipv4: ipv4, aliases: aliases}') }}"
+  notify:
+    - Restart PowerDNS Recursor

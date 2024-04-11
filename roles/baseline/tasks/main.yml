@@ -1,0 +1,58 @@
+---
+- name: Disable recommended packages
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/60no-recommends
+    mode: "0644"
+    content: |
+      APT::Install-Recommends "false";
+      APT::Install-Suggests "false";
+
+- name: Install default packages
+  ansible.builtin.apt:
+    pkg:
+      - vim
+      - rsync
+      - curl
+      - zip
+      - openssl
+      - tree
+      - fping
+      - iputils-ping
+      - netcat-traditional
+      - lsof
+      - jq
+      - unzip
+      - python3
+      - python3-pip
+      - python3-requests
+      - python3-apt
+      - screen
+
+
+- name: Disable motd spam and crap
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/update-motd.d/50-motd-news
+    - /etc/update-motd.d/80-livepatch
+    - /etc/cron.d/popularity-contest
+  when: ansible_facts["distribution"] == "Ubuntu"
+
+- name: Allow using ssh auth over sudo
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/ssh-auth-sock
+    content: |
+      Defaults    env_keep+=SSH_AUTH_SOCK
+    mode: "0440"
+
+- name: Set profile vars
+  ansible.builtin.copy:
+    dest: /etc/profile.d/{{- item.key|lower -}}.sh
+    content: export {{ item.key|upper -}}={{- item.value|lower -}}
+    mode: "0644"
+  loop:
+    - key: editor
+      value: vim
+    - key: pager
+      value: cat

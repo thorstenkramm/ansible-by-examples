@@ -1,0 +1,92 @@
+---
+- name: Make sure SSHD reads includes
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^\s*#\s*Include.*'
+    line: Include /etc/ssh/sshd_config.d/*.conf
+  notify: Restart SSHD
+
+- name: Disable passwords in SSHD
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/no-passwords.conf
+    content: |
+      # This file is managed by Ansible. Do not edit!
+      ChallengeResponseAuthentication no
+      PasswordAuthentication no
+      PermitRootLogin prohibit-password
+    mode: "0644"
+  notify: Restart SSHD
+
+- name: Set a root password
+  ansible.builtin.user:
+    name: root
+    password: "{{- root_password_hash -}}"
+
+- name: Create User
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    comment: "{{ item.firstname }} {{ item.lastname }}"
+    shell: /bin/bash
+  # Loop over all users
+  loop: "{{ users_present }}"
+  loop_control:
+    label: "{{ item.username }}"
+  when: inventory_hostname in item.hosts|default([]) or
+        item.on_all_hosts|default(false)
+
+- name: Set SSH Authorized Keys
+  ansible.posix.authorized_key:
+    user: "{{ item.username }}"
+    state: present
+    key: "{{ lookup('file', './files/ssh-pub-keys/'+item.username+'.pub') }}"
+  when: inventory_hostname in item.hosts|default([]) or
+        item.on_all_hosts|default(false)
+  loop: "{{ users_present }}"
+  loop_control:
+    label: "{{ item.username }}"
+
+- name: Create Sudo Rule
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/{{ item.username|replace('.','_') }}
+    mode: "0440"
+    content: |
+      # This file is managed by Ansible. Do not edit!
+      {{ item.username }} ALL=(ALL) NOPASSWD:ALL
+  when: item.sudo and (
+          inventory_hostname in item.hosts|default([]) or
+          item.on_all_hosts|default(false) )
+  loop: "{{ users_present }}"
+  loop_control:
+    label: "{{ item.username }}"
+
+# Make sure, users without the sudo flag have the rule removed.
+# Otherwise changing the flag of existing users will not have any effect.
+- name: Remove Sudo Rule
+  ansible.builtin.file:
+    path: /etc/sudoers.d/{{ item.username|replace('.','_') }}
+    state: absent
+  when: not item.sudo or not item.sudo|bool and (
+    inventory_hostname in item.hosts|default([]) or
+    item.on_all_hosts|default(false) )
+  loop: "{{ users_present }}"
+  loop_control:
+    label: "{{ item.username }}"
+
+- name: Delete users
+  ansible.builtin.user:
+    name: "{{ item }}"
+    state: absent
+    remove: true
+  # Loop over all users to be absent
+  loop: "{{ users_absent }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Delete sudo rules from deleted users
+  ansible.builtin.file:
+    path: /etc/sudoers.d/{{ item|replace('.','_') }}
+    state: absent
+  # Loop over all users to be absent
+  loop: "{{ users_absent }}"
+  loop_control:
+    label: "{{ item }}"

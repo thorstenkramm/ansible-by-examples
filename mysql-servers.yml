@@ -1,0 +1,6 @@
+---
+- name: Install MySQL Server and Percona Xtrabackup
+  hosts: mysql_servers
+  gather_facts: true
+  roles:
+    - role: mysql-server

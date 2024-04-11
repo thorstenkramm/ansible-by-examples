@@ -1,0 +1,115 @@
+# yamllint disable rule:line-length
+---
+- name: Set MySQL Version
+  ansible.builtin.set_fact:
+    mysql_version: "{{ mysql_version|default(mysql_default_version) }}"
+
+- name: Show requested MySQL version
+  debug:
+    msg: >-
+      You are about to install MySQL {{ mysql_version }}
+
+- name: Verify desired MySQL Version is supported
+  ansible.builtin.fail:
+    msg: >-
+      MySQL Version {{ mysql_version }} is not supported by Percona XtraBackup,
+      supported: {{ mysql_versions|join(', ') }}
+  when: mysql_versions[mysql_version] is not defined
+
+- name: Check if /usr/sbin/mysqld exists
+  stat:
+    path: /usr/sbin/mysqld
+  register: mysqld_status
+
+- name: Download MySQL server
+  ansible.builtin.get_url:
+    url: https://cdn.mysql.com/archives/mysql-{{ branch }}/{{ item }}{{ file }}
+    dest: /var/cache/private
+  retries: 3
+  vars:
+    branch: >-
+      {%- if mysql_version.startswith('8.2') -%}8.2{%- else -%}8.0{%- endif -%}
+    file: >-
+      _{{- mysql_version -}}-1
+      {{- ansible_facts["distribution"]|lower -}}
+      {{- ansible_facts["distribution_version"] -}}_amd64.deb
+    # https://cdn.mysql.com/archives/mysql-8.0/mysql-community-server-core_8.0.32-1ubuntu20.04_amd64.deb
+    # https://cdn.mysql.com/archives/mysql-8.0/libmysqlclient21_8.0.32-1ubuntu20.04_amd64.deb
+    # https://cdn.mysql.com/archives/mysql-8.2/mysql-community-server-core_8.2.0-1ubuntu22.04_amd64.deb
+  loop:
+    - mysql-common
+    - mysql-community-client-core
+    - mysql-community-client
+    - mysql-client
+    - mysql-community-client-plugins
+    - mysql-community-server-core
+    - mysql-community-server
+  loop_control:
+    label: "Downloading {{ item }}"
+  when: not mysqld_status.stat.exists
+
+- name: Install MySQL Dependencies
+  ansible.builtin.apt:
+    pkg:
+      - libaio1
+      - libmecab2
+      - libnuma1
+  when: not mysqld_status.stat.exists
+
+- name: Install downloaded MySQL packages
+  ansible.builtin.shell: |
+    set -e
+    DEBIAN_FRONTEND=noninteractive dpkg -i *mysql*.deb
+    rm -f *mysql*.deb
+  args:
+    chdir: /var/cache/private/
+    creates: /usr/sbin/mysqld
+  when: not mysqld_status.stat.exists
+
+- name: Hold MySQL Server aka prevent updates
+  ansible.builtin.dpkg_selections:
+    name: mysql_server
+    selection: hold
+
+- name: Install libmysqlclient21
+  ansible.builtin.apt:
+    pkg:
+      - libmysqlclient21
+
+- name: Install Percona Xtrabackup
+  ansible.builtin.apt:
+    deb: "{{ deb_url }}"
+    state: present
+    update_cache: false
+  vars:
+    deb_url: >-
+      https://downloads.percona.com/downloads/Percona-XtraBackup-
+      {%- if mysql_version.startswith('8.2') -%}innovative-release{%- else -%}8.0{%- endif -%}
+      /Percona-XtraBackup-
+      {{- mysql_versions[mysql_version] -}}/binary/debian/
+      {{- ansible_facts["distribution_release"] -}}
+      /x86_64/percona-xtrabackup-
+      {%- if mysql_version.startswith('8.2') -%}82{%- else -%}80{%- endif -%}
+      _{{- mysql_versions[mysql_version] -}}-1.{{- ansible_facts["distribution_release"] -}}_amd64.deb
+    # https://downloads.percona.com/downloads/Percona-XtraBackup-8.0/Percona-XtraBackup-8.0.32-26/binary/debian/focal/x86_64/percona-xtrabackup-80_8.0.32-26-1.focal_amd64.deb
+    # https://downloads.percona.com/downloads/Percona-XtraBackup-innovative-release/Percona-XtraBackup-8.2.0-1/binary/debian/jammy/x86_64/percona-xtrabackup-82_8.2.0-1-1.jammy_amd64.deb
+
+- name: Install Xtrabackup script
+  ansible.builtin.copy:
+    dest: /root/run-xtrabackup.sh
+    mode: "0700"
+    content: |
+      #!/bin/bash
+      set -e
+      test -e {{ folder }}||mkdir {{ folder }}
+      test -e {{ folder }}/current||mkdir {{ folder }}/current
+      test -e {{ folder }}/archive||mkdir {{ folder }}/archive
+      chown root:root {{ folder }}
+      chmod 0700 {{ folder }}
+      rm -rf {{ folder }}/current/*
+      xtrabackup --backup --target-dir={{ folder }}/current
+      xtrabackup --prepare --target-dir={{ folder }}/current
+      cd {{ folder }}/current
+      tar czf ../archive/$(hostname -f)-xtrabackup-$(date +%Y-%m-%d-%H-%M-%S).tar.gz .
+  vars:
+    folder: /var/backups/xtrabackup/
